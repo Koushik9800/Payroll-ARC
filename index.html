@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0d10">
+  <title>Arc Payroll — USDC Payroll</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div>
+          <div class="brand-name">Arc Payroll</div>
+          <div class="brand-sub">USDC company payroll</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div class="network-wrap">
+          <span class="network-dot"></span>
+          <select id="networkSelect" aria-label="Network">
+            <option value="testnet">Arc Testnet</option>
+            <option value="mainnet">Arc Mainnet</option>
+          </select>
+        </div>
+        <button id="connectBtn" class="btn btn-primary">Connect Wallet</button>
+        <button id="disconnectBtn" class="btn btn-ghost hidden">Disconnect</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-grid">
+        <div class="balance-card">
+          <div class="card-label">Treasury USDC balance</div>
+          <div id="usdcBalance" class="balance-value">—</div>
+          <div class="balance-meta">
+            <span id="walletAddress">Wallet not connected</span>
+            <span id="nativeBalance">Gas: —</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="card-label">Employees</div>
+          <div id="employeeCount" class="metric-value">0</div>
+          <div class="muted">Active payroll records</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="card-label">This month</div>
+          <div id="monthPaid" class="metric-value">0 USDC</div>
+          <div id="monthPayments" class="muted">0 payments</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="card-label">Network</div>
+          <div id="networkName" class="metric-value small-value">Arc Testnet</div>
+          <div id="chainIdText" class="muted">Chain 5042002</div>
+        </div>
+      </section>
+
+      <div id="message" class="message hidden"></div>
+
+      <section class="toolbar">
+        <div>
+          <h1>Payroll</h1>
+          <p>Manage employees and pay salaries in USDC on Arc.</p>
+        </div>
+        <div class="toolbar-actions">
+          <button id="addEmployeeBtn" class="btn btn-secondary">+ Add Employee</button>
+          <button id="csvBtn" class="btn btn-ghost">Import CSV</button>
+          <input id="csvInput" type="file" accept=".csv,text/csv" class="hidden">
+          <button id="bulkBtn" class="btn btn-primary">Bulk Payroll</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Employees</h2>
+            <span class="muted">Salary data is stored only in this browser.</span>
+          </div>
+          <input id="employeeSearch" class="search" placeholder="Search employee..." />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Wallet</th>
+                <th>Salary</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="employeeTable"></tbody>
+          </table>
+          <div id="emptyEmployees" class="empty">No employees yet. Add your first employee.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Monthly history</h2>
+            <span class="muted">Transactions recorded by this app.</span>
+          </div>
+          <div class="history-actions">
+            <select id="historyMonth" class="select"></select>
+            <button id="exportBtn" class="btn btn-ghost">Export CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Employee</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Transaction</th>
+              </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+          </table>
+          <div id="emptyHistory" class="empty">No payroll transactions recorded.</div>
+        </div>
+      </section>
+
+      <section class="security-note">
+        <strong>Security model</strong>
+        <span>This app never asks for or stores a seed phrase/private key. Every on-chain payment is signed by your connected wallet.</span>
+      </section>
+    </main>
+  </div>
+
+  <div id="employeeModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="modalTitle">Add Employee</h2>
+        <button id="closeModal" class="icon-btn">×</button>
+      </div>
+      <form id="employeeForm">
+        <input id="employeeId" type="hidden">
+        <label>Employee name
+          <input id="employeeName" required maxlength="80" placeholder="Alex Smith">
+        </label>
+        <label>Employee wallet address
+          <input id="employeeWallet" required placeholder="0x..." spellcheck="false">
+        </label>
+        <label>Monthly salary (USDC)
+          <input id="employeeSalary" required min="0.000001" step="0.000001" type="number" placeholder="1500">
+        </label>
+        <div class="form-actions">
+          <button type="button" id="cancelModal" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Confirm Payroll</h2>
+        <button id="closeConfirm" class="icon-btn">×</button>
+      </div>
+      <div id="confirmBody"></div>
+      <div class="warning-box">
+        Check the network and recipient list before signing. Mainnet transfers use real USDC and cannot be reversed.
+      </div>
+      <div class="form-actions">
+        <button id="cancelConfirm" class="btn btn-ghost">Cancel</button>
+        <button id="confirmPayBtn" class="btn btn-primary">Confirm & Pay</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
